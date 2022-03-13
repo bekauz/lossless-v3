@@ -3,8 +3,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable prefer-destructuring */
 const { time, constants } = require('@openzeppelin/test-helpers');
-const { fail } = require('assert');
 const { expect } = require('chai');
+const { deployMockContract, solidity, MockProvider } = require('ethereum-waffle');
 const path = require('path');
 const { setupAddresses, setupEnvironment, setupToken } = require('../utils');
 
@@ -297,7 +297,7 @@ describe.only(scriptName, () => {
     });
   });
 
-  describe.only('smart contract compensation claim', () => {
+  describe('smart contract compensation claim', () => {
 
     let contract;
 
@@ -376,57 +376,6 @@ describe.only(scriptName, () => {
       await expect(
         env.lssGovernance.retrieveContractAccountCompensation(contract.address)
       ).to.be.revertedWith("LSS: Already retrieved");
-    });
-
-    it('should revert if there is no retribution to be claimed', async () => {
-      // same setup as in beforeEach but contract has no funds
-      const contractFactory = await ethers.getContractFactory("MockContractAccount");
-      contract = await contractFactory.deploy();
-
-      await ethers.provider.send('evm_increaseTime', [
-        Number(time.duration.minutes(5)),
-      ]);
-
-      // report the contract account and unanimously vote the report out as invalid
-      await env.lssReporting.connect(adr.reporter1).report(
-        lerc20Token.address,
-        contract.address,
-      );
-
-      await env.lssGovernance.connect(adr.lssAdmin).losslessVote(4, false);
-      await env.lssGovernance.connect(adr.lerc20Admin).tokenOwnersVote(4, false);
-      await env.lssGovernance.connect(adr.member1).committeeMemberVote(4, false);
-      await env.lssGovernance.connect(adr.member2).committeeMemberVote(4, false);
-      await env.lssGovernance.connect(adr.member3).committeeMemberVote(4, false);
-      await env.lssGovernance.connect(adr.member4).committeeMemberVote(4, false);
-
-      await ethers.provider.send('evm_increaseTime', [
-        Number(time.duration.minutes(5)),
-      ]);
-
-      await env.lssToken.connect(adr.lssInitialHolder)
-        .transfer(adr.staker1.address, env.stakingAmount + env.stakingAmount);
-      await env.lssToken.connect(adr.lssInitialHolder)
-        .transfer(adr.staker2.address, env.stakingAmount * 2);
-      await env.lssToken.connect(adr.lssInitialHolder)
-        .transfer(adr.staker3.address, env.stakingAmount * 2);
-
-      await env.lssToken.connect(adr.staker1)
-        .approve(env.lssStaking.address, env.stakingAmount * 2);
-      await env.lssToken.connect(adr.staker2)
-        .approve(env.lssStaking.address, env.stakingAmount * 2);
-      await env.lssToken.connect(adr.staker3)
-        .approve(env.lssStaking.address, env.stakingAmount * 2);
-
-      await ethers.provider.send('evm_increaseTime', [
-        Number(time.duration.minutes(5)),
-      ]);
-
-      await env.lssStaking.connect(adr.staker1).stake(4);
-      await env.lssStaking.connect(adr.staker2).stake(4);
-      await env.lssStaking.connect(adr.staker3).stake(4);
-
-      await env.lssGovernance.connect(adr.lssAdmin).resolveReport(4);
     });
 
     it('should retrieve compensation and emit CompensationRetrieval event', async () => {
