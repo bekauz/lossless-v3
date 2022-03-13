@@ -297,34 +297,145 @@ describe.only(scriptName, () => {
     });
   });
 
-  describe('smart contract compensation claim', () => {
+  describe.only('smart contract compensation claim', () => {
+
+    let contract;
 
     beforeEach(async () => {
-      // TODO: set up contract and vote to negatively resolve report
+
+      // deploy the mock contract and transfer some funds
+      const contractFactory = await ethers.getContractFactory("MockContractAccount");
+      contract = await contractFactory.deploy();
+
+      await env.lssToken.connect(adr.lssInitialHolder)
+              .transfer(contract.address, env.stakingAmount * 3);
+
+      await ethers.provider.send('evm_increaseTime', [
+        Number(time.duration.minutes(5)),
+      ]);
+
+      // report the contract account and unanimously vote the report out as invalid
+      await env.lssReporting.connect(adr.reporter1).report(
+        lerc20Token.address,
+        contract.address,
+      );
+
+      await env.lssGovernance.connect(adr.lssAdmin).losslessVote(3, false);
+      await env.lssGovernance.connect(adr.lerc20Admin).tokenOwnersVote(3, false);
+      await env.lssGovernance.connect(adr.member1).committeeMemberVote(3, false);
+      await env.lssGovernance.connect(adr.member2).committeeMemberVote(3, false);
+      await env.lssGovernance.connect(adr.member3).committeeMemberVote(3, false);
+      await env.lssGovernance.connect(adr.member4).committeeMemberVote(3, false);
+
+      await ethers.provider.send('evm_increaseTime', [
+        Number(time.duration.minutes(5)),
+      ]);
+
+      await env.lssToken.connect(adr.lssInitialHolder)
+        .transfer(adr.staker1.address, env.stakingAmount + env.stakingAmount);
+      await env.lssToken.connect(adr.lssInitialHolder)
+        .transfer(adr.staker2.address, env.stakingAmount * 2);
+      await env.lssToken.connect(adr.lssInitialHolder)
+        .transfer(adr.staker3.address, env.stakingAmount * 2);
+
+      await env.lssToken.connect(adr.staker1)
+        .approve(env.lssStaking.address, env.stakingAmount * 2);
+      await env.lssToken.connect(adr.staker2)
+        .approve(env.lssStaking.address, env.stakingAmount * 2);
+      await env.lssToken.connect(adr.staker3)
+        .approve(env.lssStaking.address, env.stakingAmount * 2);
+
+      await ethers.provider.send('evm_increaseTime', [
+        Number(time.duration.minutes(5)),
+      ]);
+
+      await env.lssStaking.connect(adr.staker1).stake(3);
+      await env.lssStaking.connect(adr.staker2).stake(3);
+      await env.lssStaking.connect(adr.staker3).stake(3);
+
+      await env.lssGovernance.connect(adr.lssAdmin).resolveReport(3);
     });
 
-    it('should revert if target address does not belong to a contract account', () => {
-      fail();
+    it('should revert if target address does not belong to a contract account', async () => {
+      await expect(
+        env.lssGovernance.retrieveContractAccountCompensation(adr.member2.address),
+      ).to.be.revertedWith('LSS: Must be contract account');
     });
 
-    it('should revert if paused', () => {
-      fail();
+    it('should revert if paused', async () => {
+      await env.lssGovernance.connect(adr.lssPauseAdmin).pause();
+
+      await expect(
+        env.lssGovernance.retrieveContractAccountCompensation(contract.address),
+      ).to.be.revertedWith('Pausable: paused');
     });
 
-    it('should revert if compensation has already been claimed', () => {
-      fail();
+    it('should revert if compensation has already been claimed', async () => {
+      await env.lssGovernance.retrieveContractAccountCompensation(contract.address);
+
+      await expect(
+        env.lssGovernance.retrieveContractAccountCompensation(contract.address)
+      ).to.be.revertedWith("LSS: Already retrieved");
     });
 
-    it('should revert if there is no retribution to be claimed', () => {
-      fail();
+    it('should revert if there is no retribution to be claimed', async () => {
+      // same setup as in beforeEach but contract has no funds
+      const contractFactory = await ethers.getContractFactory("MockContractAccount");
+      contract = await contractFactory.deploy();
+
+      await ethers.provider.send('evm_increaseTime', [
+        Number(time.duration.minutes(5)),
+      ]);
+
+      // report the contract account and unanimously vote the report out as invalid
+      await env.lssReporting.connect(adr.reporter1).report(
+        lerc20Token.address,
+        contract.address,
+      );
+
+      await env.lssGovernance.connect(adr.lssAdmin).losslessVote(4, false);
+      await env.lssGovernance.connect(adr.lerc20Admin).tokenOwnersVote(4, false);
+      await env.lssGovernance.connect(adr.member1).committeeMemberVote(4, false);
+      await env.lssGovernance.connect(adr.member2).committeeMemberVote(4, false);
+      await env.lssGovernance.connect(adr.member3).committeeMemberVote(4, false);
+      await env.lssGovernance.connect(adr.member4).committeeMemberVote(4, false);
+
+      await ethers.provider.send('evm_increaseTime', [
+        Number(time.duration.minutes(5)),
+      ]);
+
+      await env.lssToken.connect(adr.lssInitialHolder)
+        .transfer(adr.staker1.address, env.stakingAmount + env.stakingAmount);
+      await env.lssToken.connect(adr.lssInitialHolder)
+        .transfer(adr.staker2.address, env.stakingAmount * 2);
+      await env.lssToken.connect(adr.lssInitialHolder)
+        .transfer(adr.staker3.address, env.stakingAmount * 2);
+
+      await env.lssToken.connect(adr.staker1)
+        .approve(env.lssStaking.address, env.stakingAmount * 2);
+      await env.lssToken.connect(adr.staker2)
+        .approve(env.lssStaking.address, env.stakingAmount * 2);
+      await env.lssToken.connect(adr.staker3)
+        .approve(env.lssStaking.address, env.stakingAmount * 2);
+
+      await ethers.provider.send('evm_increaseTime', [
+        Number(time.duration.minutes(5)),
+      ]);
+
+      await env.lssStaking.connect(adr.staker1).stake(4);
+      await env.lssStaking.connect(adr.staker2).stake(4);
+      await env.lssStaking.connect(adr.staker3).stake(4);
+
+      await env.lssGovernance.connect(adr.lssAdmin).resolveReport(4);
     });
 
-    it('should call lossless reporting contract with correct params', () => {
-      fail();
-    });
-
-    it('should retrieve compensation and emit CompensationRetrieval event', () => {
-      fail();
+    it('should retrieve compensation and emit CompensationRetrieval event', async () => {
+      await expect(
+        env.lssGovernance.retrieveContractAccountCompensation(contract.address)
+      ).to.emit(env.lssGovernance, "ContractAccountCompensationRetrieval").withArgs(
+        contract.address,
+        20
+      );
     });
   });
 });
