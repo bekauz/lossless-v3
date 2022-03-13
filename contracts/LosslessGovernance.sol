@@ -95,6 +95,11 @@ contract LosslessGovernance is ILssGovernance, Initializable, AccessControlUpgra
         _;
     }
 
+    modifier onlyContractAccount(address _address) {
+        require(isContract(_address), "LSS: Must be contract account");
+        _;
+    }
+
     // --- ADMINISTRATION ---
 
     function pause() public onlyLosslessPauseAdmin  {
@@ -549,10 +554,25 @@ contract LosslessGovernance is ILssGovernance, Initializable, AccessControlUpgra
 
     }
 
+    /// @notice This lets any address to claim a compensation on behalf of a smart contract
+    /// @param _address address of the erraneously reported smart contract
+    function retrieveContractAccountCompensation(address _address) override public onlyContractAccount(_address) whenNotPaused {
+        require(!compensation[_address].payed, "LSS: Already retrieved");
+        require(compensation[_address].amount != 0, "LSS: No retribution assigned");
+
+        compensation[_address].payed = true;
+
+        losslessReporting.retrieveCompensation(_address, compensation[_address].amount);
+
+        emit CompensationRetrieval(_address, compensation[_address].amount);
+
+        compensation[_address].amount = 0;
+    }
+
     ///@notice This function verifies is an address belongs to a contract
     ///@param _addr address to verify
     function isContract(address _addr) private view returns (bool){
-         uint32 size;
+        uint32 size;
         assembly {
             size := extcodesize(_addr)
         }

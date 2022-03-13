@@ -3,6 +3,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable prefer-destructuring */
 const { time, constants } = require('@openzeppelin/test-helpers');
+const { fail } = require('assert');
 const { expect } = require('chai');
 const path = require('path');
 const { setupAddresses, setupEnvironment, setupToken } = require('../utils');
@@ -12,7 +13,7 @@ let env;
 
 const scriptName = path.basename(__filename, '.js');
 
-describe(scriptName, () => {
+describe.only(scriptName, () => {
   beforeEach(async () => {
     adr = await setupAddresses();
     env = await setupEnvironment(adr.lssAdmin,
@@ -293,6 +294,37 @@ describe(scriptName, () => {
         adr.maliciousActor1.address,
         20,
       );
+    });
+  });
+
+  describe('smart contract compensation claim', () => {
+
+    beforeEach(async () => {
+      // TODO: set up contract and vote to negatively resolve report
+    });
+
+    it('should revert if target address does not belong to a contract account', () => {
+      fail();
+    });
+
+    it('should revert if paused', () => {
+      fail();
+    });
+
+    it('should revert if compensation has already been claimed', () => {
+      fail();
+    });
+
+    it('should revert if there is no retribution to be claimed', () => {
+      fail();
+    });
+
+    it('should call lossless reporting contract with correct params', () => {
+      fail();
+    });
+
+    it('should retrieve compensation and emit CompensationRetrieval event', () => {
+      fail();
     });
   });
 });
